@@ -1,0 +1,34 @@
+# Go
+server/bin/
+*.exe
+*.test
+*.out
+coverage.*
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.ipynb_checkpoints/
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+
+# Data and experiments (downloaded by scripts, never committed)
+ml/data/
+mlruns/
+mlartifacts/
+
+# Models: only versioned releases are committed
+models/*.onnx
+!models/.gitkeep
+
+# Local config and secrets
+.env
+*.local
+
+# Editors and OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

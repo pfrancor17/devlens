@@ -1,0 +1,65 @@
+# Feature contract for the PR Risk model.
+#
+# Single source of truth: the Python training pipeline and the Go server both
+# compute these features from this file. A contract test in CI checks that both
+# implementations return the same values for the same commits.
+#
+# Rules:
+#   - Never rename or reorder a feature without bumping `version`.
+#   - Every feature declares its type, the window it looks at and how it is computed.
+
+version: 0.1.0
+model: pr-risk
+
+features:
+  - name: lines_added
+    type: int
+    source: diff
+    description: Total lines added across all files in the change.
+
+  - name: lines_deleted
+    type: int
+    source: diff
+    description: Total lines deleted across all files in the change.
+
+  - name: files_changed
+    type: int
+    source: diff
+    description: Number of distinct files touched.
+
+  - name: directories_changed
+    type: int
+    source: diff
+    description: Number of distinct directories touched.
+
+  - name: change_entropy
+    type: float
+    source: diff
+    description: Shannon entropy of modified lines across files; high values mean a scattered change.
+
+  - name: tests_modified
+    type: bool
+    source: diff
+    description: True when at least one test file is added or modified.
+
+  - name: files_with_bug_history
+    type: int
+    source: history
+    window_days: 365
+    description: Touched files that appear in at least one bug-fixing commit in the window.
+
+  - name: mean_file_age_days
+    type: float
+    source: history
+    description: Average age, in days, of the touched files since their first commit.
+
+  - name: author_prior_commits
+    type: int
+    source: history
+    description: Commits the author made before this change in the same repository.
+
+  - name: author_module_experience
+    type: int
+    source: history
+    window_days: 365
+    description: Commits the author made in the touched directories within the window.
