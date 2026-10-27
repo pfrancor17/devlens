@@ -55,7 +55,9 @@ func registerScorePullRequest(server *mcp.Server, scorer PullRequestScorer) {
 	mcp.AddTool(server, &mcp.Tool{
 		Name: "score_pull_request",
 		Description: "Estimates the probability (0-1) that a GitHub pull request introduces a defect, " +
-			"with its level (low, medium, high), the model used and each feature's contribution to the score.",
+			"with its level (low, medium, high), the model used and each feature's contribution. " +
+			"Contributions are in the unit named by impact_scale (log-odds): positive raises the risk, " +
+			"negative lowers it, and they combine through a sigmoid, so they do not add up to the probability.",
 	}, func(ctx context.Context, _ *mcp.CallToolRequest, in scorePullRequestInput) (*mcp.CallToolResult, domain.RiskAssessment, error) {
 		assessment, err := scorer.Score(ctx, in.Repo, in.Number)
 		return nil, assessment, err

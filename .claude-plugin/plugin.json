@@ -1,7 +1,7 @@
 {
   "name": "devlens",
   "displayName": "DevLens",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Subagents that measure every stage of software delivery with ML: requirement analysis, planning, senior-level review and pull request risk.",
   "author": {
     "name": "Patricia Franco Ruiz",

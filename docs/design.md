@@ -93,9 +93,9 @@ devlens/
 │       ├── adapter/             # github, onnx, store, vectorindex
 │       └── mcpserver/           # driving adapter: MCP tools
 ├── ml/                          # Python — data and training
-│   ├── pipelines/               # one pipeline per model
-│   ├── features/                # feature contract implementation
-│   └── evaluation/              # metrics and thresholds
+│   ├── configs/                 # one training config per model
+│   ├── src/devlens_ml/          # data, temporal split, models, evaluation, ONNX export
+│   └── tests/                   # full pipeline on synthetic data
 ├── contracts/features.yaml      # single source of truth for features
 ├── models/                      # .onnx + versioned metadata
 ├── docs/                        # design, ADRs
@@ -191,9 +191,19 @@ Five models, each with a simple baseline and an improved version; the comparison
 - **Temporal split** for anything with a date (commits, issues): train on the past, evaluate on the future.
 - Imbalanced classes: report recall and PR-AUC, not only accuracy.
 - Every model has a **minimum threshold** in CI: if the metric drops below it, the pipeline fails.
-- Every run is logged in MLflow with data, parameters, metrics and the ONNX artifact.
+- Every run produces a report with data volumes, test period, baseline and model metrics and failed gates. MLflow tracking joins with the first run on real data.
 
 Target metrics are set after each phase's baseline, not before: measure first, promise later.
+
+**PR Risk model backlog.** Found by running the heuristic baseline on real pull requests and the pipeline on synthetic data:
+
+| Item | Why | When |
+| --- | --- | --- |
+| Calibrate the trained model (Platt) and publish its calibration error | A heuristic score orders PRs but is not a probability | Phase 1, in the pipeline |
+| Report impacts with their unit (`impact_scale: log-odds`) | Readers and agents tried to add impacts up to the probability | Done in v0.3.0 |
+| Retune the `medium` and `high` thresholds from data | With calibrated probabilities and a 26% defect rate, few changes reach 0.65, so recall at "high" is very low | After the first ApacheJIT run |
+| Split lines added into production and test lines | Test lines currently count as risk | Needs own SZZ labels: ApacheJIT does not separate them |
+| History features (bug history, file age, author experience) | Strongest predictors in the JIT literature | With the repository-history adapter in Go |
 
 ## 7. Senior-level quality standards
 

@@ -17,8 +17,8 @@ import (
 	"github.com/pfrancor17/devlens/server/internal/usecase/prrisk"
 )
 
-// version is overridden at build time: go build -ldflags "-X main.version=v0.2.0"
-var version = "v0.2.0"
+// version is overridden at build time: go build -ldflags "-X main.version=v0.4.0"
+var version = "v0.3.0"
 
 func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)

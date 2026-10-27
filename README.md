@@ -4,7 +4,7 @@
 
 Coding agents write fast, but they do not measure. DevLens gives them specialized subagents that decide from objective, explainable signals: how ambiguous a requirement is, which files a change will touch, whether new code duplicates existing logic or breaks the architecture, and how likely a pull request is to introduce a bug. Every signal comes from a model, and every verdict names the model that produced it.
 
-> **Status:** Phase 1 in progress. `score_pull_request` and the `risk-assessor` subagent work today with a heuristic baseline; the trained XGBoost model comes next. See the [roadmap](#roadmap).
+> **Status:** Phase 1 in progress. `score_pull_request` and the `risk-assessor` subagent work today with a heuristic baseline. The [training pipeline](ml/) for the XGBoost model is ready and waits for the first run on ApacheJIT. See the [roadmap](#roadmap).
 
 ## How it works
 
@@ -102,7 +102,7 @@ For Claude Desktop, add this to `claude_desktop_config.json` and restart the app
 agents/          Subagents
 skills/          Skills (entry points)
 server/          Go MCP server (hexagonal: domain, use cases, ports, adapters)
-ml/              Python training pipelines
+ml/              Python training pipeline (temporal split, baseline vs XGBoost, calibration, ONNX)
 contracts/       Feature contract shared by Python and Go
 models/          Versioned ONNX models
 docs/            Design document and ADRs

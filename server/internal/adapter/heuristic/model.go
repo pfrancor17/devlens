@@ -63,6 +63,7 @@ func (Model) Predict(features domain.Features) domain.Prediction {
 	return domain.Prediction{
 		Probability: round(sigmoid(logOdds)),
 		Model:       ModelID,
+		ImpactScale: domain.ImpactLogOdds,
 		Reasons:     reasons,
 	}
 }

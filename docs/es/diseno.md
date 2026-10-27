@@ -93,9 +93,9 @@ devlens/
 │       ├── adapter/             # github, onnx, store, vectorindex
 │       └── mcpserver/           # adaptador de entrada: tools MCP
 ├── ml/                          # Python — datos y entrenamiento
-│   ├── pipelines/               # un pipeline por modelo
-│   ├── features/                # implementación del contrato
-│   └── evaluation/              # métricas y umbrales
+│   ├── configs/                 # una configuración de entrenamiento por modelo
+│   ├── src/devlens_ml/          # datos, split temporal, modelos, evaluación, export ONNX
+│   └── tests/                   # pipeline completo sobre datos sintéticos
 ├── contracts/features.yaml      # fuente única de verdad
 ├── models/                      # .onnx + metadata versionada
 ├── docs/                        # diseño y ADRs
@@ -191,9 +191,19 @@ Son cinco modelos, cada uno con un baseline simple y una versión mejorada; se p
 - Split **temporal** para todo lo que tenga fecha (commits, issues): se entrena con el pasado y se evalúa con el futuro.
 - Clases desbalanceadas: se reporta recall y PR-AUC, no solo accuracy.
 - Cada modelo tiene un **umbral mínimo** en CI: si la métrica cae por debajo, el pipeline falla.
-- Toda corrida queda registrada en MLflow con datos, parámetros, métricas y artefacto ONNX.
+- Toda corrida produce un reporte con volumen de datos, periodo de test, métricas del baseline y del modelo, y gates fallidos. MLflow se suma con la primera corrida sobre datos reales.
 
 Las métricas objetivo se fijan después del baseline de cada fase, no antes: primero se mide, luego se promete.
+
+**Backlog del modelo PR Risk.** Salió de correr el baseline heurístico sobre PRs reales y el pipeline sobre datos sintéticos:
+
+| Ítem | Por qué | Cuándo |
+| --- | --- | --- |
+| Calibrar el modelo entrenado (Platt) y publicar su error de calibración | Un puntaje heurístico ordena PRs, pero no es una probabilidad | Fase 1, en el pipeline |
+| Reportar los impactos con su unidad (`impact_scale: log-odds`) | Lectores y agentes intentaron sumar los impactos hasta la probabilidad | Hecho en v0.3.0 |
+| Reajustar los umbrales `medium` y `high` con datos | Con probabilidades calibradas y 26 % de defectos, pocos cambios llegan a 0,65, así que el recall en "high" es muy bajo | Después de la primera corrida con ApacheJIT |
+| Separar las líneas añadidas en producción y tests | Hoy las líneas de tests cuentan como riesgo | Requiere etiquetas propias con SZZ: ApacheJIT no las separa |
+| Features de historial (historial de bugs, edad del archivo, experiencia del autor) | Son los predictores más fuertes en la literatura de JIT | Con el adaptador de historial del repositorio en Go |
 
 ## 7. Estándares de calidad nivel senior
 

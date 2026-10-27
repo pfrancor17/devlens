@@ -49,8 +49,8 @@ func TestAddingTestsLowersRisk(t *testing.T) {
 func TestReasonsAreSortedByAbsoluteImpactAndNameTheModel(t *testing.T) {
 	got := heuristic.Model{}.Predict(features(300, 8, 4, 2.5, true))
 
-	if got.Model != heuristic.ModelID {
-		t.Errorf("model = %q, want %q", got.Model, heuristic.ModelID)
+	if got.Model != heuristic.ModelID || got.ImpactScale != domain.ImpactLogOdds {
+		t.Errorf("model = %q, scale = %q; want %q in %s", got.Model, got.ImpactScale, heuristic.ModelID, domain.ImpactLogOdds)
 	}
 	for i := 1; i < len(got.Reasons); i++ {
 		prev, cur := got.Reasons[i-1].Impact, got.Reasons[i].Impact

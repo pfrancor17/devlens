@@ -28,6 +28,12 @@ func LevelFor(probability float64) RiskLevel {
 	}
 }
 
+// ImpactLogOdds means reason impacts are additive contributions to the
+// log-odds of a defect, the scale of logistic models and of SHAP values for
+// gradient-boosted classifiers. Impacts plus the model's bias, passed through
+// a sigmoid, give the probability; they do not add up to it directly.
+const ImpactLogOdds = "log-odds"
+
 // RiskReason is one feature's contribution to a prediction. A positive impact
 // raises the risk; a negative one lowers it.
 type RiskReason struct {
@@ -40,35 +46,38 @@ type RiskReason struct {
 type Prediction struct {
 	Probability float64      `json:"probability"`
 	Model       string       `json:"model"`
+	ImpactScale string       `json:"impact_scale"`
 	Reasons     []RiskReason `json:"reasons"`
 }
 
 // RiskAssessment is the full answer about a pull request.
 type RiskAssessment struct {
-	Repository string       `json:"repository"`
-	Number     int          `json:"number"`
-	Title      string       `json:"title"`
-	Author     string       `json:"author"`
-	URL        string       `json:"url"`
-	Risk       float64      `json:"risk"`
-	Level      RiskLevel    `json:"level"`
-	Model      string       `json:"model"`
-	Reasons    []RiskReason `json:"reasons"`
-	Features   Features     `json:"features"`
+	Repository  string       `json:"repository"`
+	Number      int          `json:"number"`
+	Title       string       `json:"title"`
+	Author      string       `json:"author"`
+	URL         string       `json:"url"`
+	Risk        float64      `json:"risk"`
+	Level       RiskLevel    `json:"level"`
+	Model       string       `json:"model"`
+	ImpactScale string       `json:"impact_scale"`
+	Reasons     []RiskReason `json:"reasons"`
+	Features    Features     `json:"features"`
 }
 
 // Assess combines a pull request, its features and a model prediction.
 func Assess(pr PullRequest, features Features, prediction Prediction) RiskAssessment {
 	return RiskAssessment{
-		Repository: pr.Repository.String(),
-		Number:     pr.Number,
-		Title:      pr.Title,
-		Author:     pr.Author,
-		URL:        pr.URL,
-		Risk:       prediction.Probability,
-		Level:      LevelFor(prediction.Probability),
-		Model:      prediction.Model,
-		Reasons:    prediction.Reasons,
-		Features:   features,
+		Repository:  pr.Repository.String(),
+		Number:      pr.Number,
+		Title:       pr.Title,
+		Author:      pr.Author,
+		URL:         pr.URL,
+		Risk:        prediction.Probability,
+		Level:       LevelFor(prediction.Probability),
+		Model:       prediction.Model,
+		ImpactScale: prediction.ImpactScale,
+		Reasons:     prediction.Reasons,
+		Features:    features,
 	}
 }

@@ -1,0 +1,54 @@
+# Training configuration for the PR Risk model.
+#
+# Before the first real run, open the dataset and confirm the column names and
+# units below (see ml/README.md, "Before training"). The pipeline fails with the
+# list of columns it found if any mapped column is missing.
+
+model_name: pr-risk-xgb
+
+dataset:
+  # ApacheJIT (Keshavarz & Nagappan, MSR 2022): https://doi.org/10.5281/zenodo.5907001
+  # Download the commit-level CSV and place it here. The file is never committed.
+  path: data/apachejit_total.csv
+  label: buggy          # 1 = bug-inducing commit
+  date: author_date     # used for the temporal split
+  date_unit: s          # "s" for Unix seconds; null for ISO date strings
+  # dataset column -> contract feature name (contracts/features.yaml)
+  columns:
+    la: lines_added
+    ld: lines_deleted
+    nf: files_changed
+    nd: directories_changed
+    ent: change_entropy
+
+# Features the model trains on, in the order the server must send them.
+# Only features the Go server can compute today belong here: history features
+# join when the repository-history adapter exists, and tests_modified needs our
+# own labels because ApacheJIT does not carry it.
+features:
+  - lines_added
+  - lines_deleted
+  - files_changed
+  - directories_changed
+  - change_entropy
+
+# Temporal split by date: oldest commits train, newest commits test.
+split:
+  train: 0.7
+  calibration: 0.1
+  test: 0.2
+
+xgboost:
+  n_estimators: 400
+  max_depth: 5
+  learning_rate: 0.05
+  subsample: 0.8
+  colsample_bytree: 0.8
+  min_child_weight: 5
+
+# Gates checked on the test split. The run fails if any gate fails, so CI
+# can block a model that got worse.
+gates:
+  min_roc_auc: 0.65          # absolute floor for the improved model
+  must_beat_baseline: true   # improved model must beat logistic regression on PR-AUC
+  max_calibration_error: 0.10

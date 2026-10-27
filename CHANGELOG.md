@@ -2,6 +2,15 @@
 
 All notable changes to this project are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses [Semantic Versioning](https://semver.org/).
 
+## [0.3.0] - 2026-10-27
+
+### Added
+
+- Training pipeline for the PR Risk model (`ml/`): contract check, dataset loading with configurable column mapping, temporal split, logistic baseline vs XGBoost, Platt calibration, metrics for imbalanced data, gates, and ONNX export verified against XGBoost.
+- `impact_scale` in `score_pull_request` results, so agents read contributions as log-odds instead of adding them up to the risk.
+- CI job for the ML pipeline: ruff and pytest.
+- PR Risk model backlog in the design document.
+
 ## [0.2.0] - 2026-10-26
 
 ### Added
