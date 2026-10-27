@@ -1,0 +1,22 @@
+{
+  "name": "devlens",
+  "displayName": "DevLens",
+  "version": "0.2.0",
+  "description": "Subagents that measure every stage of software delivery with ML: requirement analysis, planning, senior-level review and pull request risk.",
+  "author": {
+    "name": "Patricia Franco Ruiz",
+    "url": "https://github.com/pfrancor17"
+  },
+  "homepage": "https://github.com/pfrancor17/devlens",
+  "repository": "https://github.com/pfrancor17/devlens",
+  "license": "MIT",
+  "keywords": ["mcp", "machine-learning", "code-review", "defect-prediction", "subagents"],
+  "userConfig": {
+    "github_token": {
+      "type": "string",
+      "title": "GitHub token",
+      "description": "Read-only token used to fetch pull requests. Optional for public repositories; raises GitHub's rate limit.",
+      "sensitive": true
+    }
+  }
+}

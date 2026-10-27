@@ -4,7 +4,7 @@
 
 ## 1. Vision
 
-DevLens is an MCP server that accompanies an AI agent through the whole delivery lifecycle: it analyzes the requirement, plans the implementation, demands senior-level code, scores the risk of every pull request and learns from real outcomes. Every stage relies on a trained and evaluated ML or DL model, not only on an LLM answering.
+DevLens is a multi-agent system, delivered as a Claude Code plugin, that accompanies an AI agent through the whole delivery lifecycle: it analyzes the requirement, plans the implementation, demands senior-level code, scores the risk of every pull request and learns from real outcomes. Every stage has a specialized subagent whose decisions rest on a trained and evaluated ML or DL model, not only on an LLM answering.
 
 **Problem.** Coding agents write fast, but they do not measure. They cannot tell whether a requirement is ambiguous, whether they are duplicating existing logic, whether they are breaking the architecture or whether a change is risky. DevLens gives them that objective measurement.
 
@@ -12,6 +12,7 @@ DevLens is an MCP server that accompanies an AI agent through the whole delivery
 
 - Measurement with purpose-built models (XGBoost, code embeddings, NLP classifiers) with published metrics.
 - Explainability: every score comes with its reasons (SHAP).
+- Specialized subagents that decide from measurements, not opinions (see section 4).
 - Learning loop: models are retrained with each team's real outcomes.
 - The repository itself is an example of senior-level code and reviews itself (dogfooding).
 - Built from scratch on public data.
@@ -20,13 +21,13 @@ DevLens is an MCP server that accompanies an AI agent through the whole delivery
 
 The full flow is **requirement → plan → senior implementation → risk review → learning**. Each module is usable on its own and adds value to the next one.
 
-| Module | Stage | What it measures | Main technique |
-| --- | --- | --- | --- |
-| Requirement Analyzer | Analyze | Ambiguity and complexity of a requirement | NLP classifier + story-point regression (DL) |
-| Implementation Planner | Plan | Files and modules likely impacted, early risk | Code embeddings + repository history |
-| Senior Reviewer | Implement | Duplicates, code smells, architecture violations, conventions | Embeddings (clones) + smell classifier + static analysis |
-| PR Risk Scorer | Review | Probability that a PR introduces a bug; deviation from the plan | XGBoost + diff embeddings, SHAP |
-| Learning Loop | Learn | Real accuracy of estimates and predictions | Outcome log + periodic retraining |
+| Module | Stage | Subagent | What it measures | Main technique |
+| --- | --- | --- | --- | --- |
+| Requirement Analyzer | Analyze | `requirement-analyst` | Ambiguity and complexity of a requirement | NLP classifier + story-point regression (DL) |
+| Implementation Planner | Plan | `planner` | Files and modules likely impacted, early risk | Code embeddings + repository history |
+| Senior Reviewer | Implement | `senior-reviewer` | Duplicates, code smells, architecture violations, conventions | Embeddings (clones) + smell classifier + static analysis |
+| PR Risk Scorer | Review | `risk-assessor` | Probability that a PR introduces a bug; deviation from the plan | XGBoost + diff embeddings, SHAP |
+| Learning Loop | Learn | `learning-analyst` | Real accuracy of estimates and predictions | Outcome log + periodic retraining |
 
 **Out of scope for now:** generating code (the agent does that), a full web UI, providers other than GitHub.
 
@@ -79,6 +80,10 @@ flowchart TB
 
 ```
 devlens/
+├── .claude-plugin/              # plugin manifest and marketplace
+├── .mcp.json                    # starts the Go MCP server for the plugin
+├── agents/                      # subagents (one per module + orchestrator)
+├── skills/                      # entry points such as /devlens:assess-pr
 ├── server/                      # Go — MCP server
 │   ├── cmd/devlens/             # entry point (stdio transport)
 │   └── internal/
@@ -97,7 +102,45 @@ devlens/
 └── .github/workflows/           # CI
 ```
 
-## 4. MCP tools
+## 4. Agent layer: subagents that decide from measurements
+
+DevLens has three layers ([ADR-003](adr/003-subagent-architecture.md)): the Go MCP server **measures**, the subagents **judge**, and the skills give people an **entry point**. Each subagent can call only its own module's tools, so it works with a small, focused context.
+
+```mermaid
+flowchart TB
+    user["Developer or coding agent"]
+    skills["Skills · /devlens:assess-pr, /devlens:deliver"]
+    lead["devlens-lead · orchestrator<br/>chains stages, stops when a measurement says so"]
+
+    subgraph specialists["Specialist subagents"]
+        direction LR
+        ra["requirement-analyst"]
+        pl["planner"]
+        sr["senior-reviewer"]
+        rk["risk-assessor"]
+        la["learning-analyst"]
+    end
+
+    server["DevLens MCP server · Go<br/>measurements from ML models"]
+
+    user --> skills --> lead --> specialists
+    skills -. single stage .-> specialists
+    specialists -- "own module's tools only" --> server
+```
+
+**Decision policies.** Every subagent carries a table that maps the model's level to a verdict and to what it must require. The `risk-assessor` policy:
+
+| Level | Verdict | Requirement |
+| --- | --- | --- |
+| low | Ready for normal review | Nothing extra |
+| medium | Review with focus | Name the 1–2 areas to review first |
+| high | Not ready to merge | At least one concrete action that lowers risk |
+
+The orchestrator applies the same idea across stages: high ambiguity returns clarifying questions instead of a plan; high PR risk sends the change back to implementation with the actions the reviewer named.
+
+**Packaging.** The repository root is a Claude Code plugin: `.claude-plugin/plugin.json`, `.mcp.json` (starts the Go server), `agents/` and `skills/`. It installs with `/plugin marketplace add pfrancor17/devlens` and `/plugin install devlens@devlens`.
+
+## 5. MCP tools
 
 DevLens exposes nine tools. Every response includes the model version that produced it and the reasons behind the result.
 
@@ -113,7 +156,7 @@ DevLens exposes nine tools. Every response includes the model version that produ
 | `record_outcome` | Learning Loop | PR, real outcome (bug yes/no, real effort) | confirmation |
 | `project_insights` | Learning Loop | repo | historical accuracy of estimates and predictions, trends |
 
-A `ping` tool is available from day one to check that the server is running and to report the state of each module.
+A `ping` tool reports that the server is running and the state of each module. `score_pull_request` is available today with a heuristic baseline model (`pr-risk-heuristic`) that the trained XGBoost model replaces behind the same port.
 
 Example `score_pull_request` response:
 
@@ -131,7 +174,7 @@ Example `score_pull_request` response:
 }
 ```
 
-## 5. ML/DL models
+## 6. ML/DL models
 
 Five models, each with a simple baseline and an improved version; the comparison between both is always published. Datasets are candidates: availability and license must be confirmed before use.
 
@@ -152,7 +195,7 @@ Five models, each with a simple baseline and an improved version; the comparison
 
 Target metrics are set after each phase's baseline, not before: measure first, promise later.
 
-## 6. Senior-level quality standards
+## 7. Senior-level quality standards
 
 The repository is treated as a product: no phase closes without meeting these standards, and from phase 2 on DevLens reviews its own pull requests.
 
@@ -181,19 +224,19 @@ The repository is treated as a product: no phase closes without meeting these st
 - ADRs in [`docs/adr/`](adr/) for every relevant decision (context, decision, consequences).
 - README with diagram, demo, current metrics and a setup guide under 5 minutes.
 
-## 7. Roadmap
+## 8. Roadmap
 
 The full project takes 14–17 weeks at 8–10 hours per week. Each phase closes demonstrable before the next one opens. The Senior Reviewer comes second so DevLens can review its own code while the remaining phases are built.
 
 | Phase | Focus | Duration | Done when |
 | --- | --- | --- | --- |
-| 1 | PR Risk Scorer + foundations: hexagonal repo, CI, ADRs, Go MCP server, XGBoost model in ONNX | 3–4 weeks | `score_pull_request` returns SHAP reasons on a real PR and the AUC is published |
-| 2 | Senior Reviewer: embedding-based duplicates, code smells, architecture guard, repo conventions | 3–4 weeks | DevLens comments quality and risk on its own PRs |
+| 1 | PR Risk Scorer + foundations: hexagonal repo, CI, ADRs, Go MCP server, plugin with `risk-assessor`, XGBoost model in ONNX | 3–4 weeks | `risk-assessor` gives a verdict with SHAP reasons on a real PR and the AUC is published |
+| 2 | Senior Reviewer + `devlens-lead` orchestrator: embedding-based duplicates, code smells, architecture guard, repo conventions | 3–4 weeks | DevLens comments quality and risk on its own PRs |
 | 3 | Requirement Analyzer: ambiguity classifier and complexity regressor | 3 weeks | `analyze_requirement` responds with published F1 and MAE |
 | 4 | Implementation Planner: repo embedding index, impacted files, step-by-step plan | 3 weeks | The plan is compared against the real PR and the deviation is reported |
 | 5 | Learning Loop: `record_outcome`, periodic retraining, `project_insights` | 2–3 weeks | A model retrained on real outcomes with its improvement measured |
 
-## 8. Risks and open decisions
+## 9. Risks and open decisions
 
 The main risk is scope: five modules are a lot, so each phase must close demonstrable before the next one opens.
 

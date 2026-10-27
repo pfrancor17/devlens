@@ -1,0 +1,14 @@
+{
+  "name": "devlens",
+  "owner": {
+    "name": "Patricia Franco Ruiz",
+    "url": "https://github.com/pfrancor17"
+  },
+  "plugins": [
+    {
+      "name": "devlens",
+      "source": "./",
+      "description": "Subagents that measure every stage of software delivery with ML."
+    }
+  ]
+}
